@@ -41,6 +41,7 @@ class OpenconnectPulseLauncher:
 
     def __init__(self):
         self.is_root = os.geteuid() == 0
+        # self.chrome_profile_dir = os.path.join(xdg_config_home(), 'google-chrome')
         self.chrome_profile_dir = os.path.join(xdg_config_home(), 'chromedriver', 'pulsevpn')
         if not os.path.exists(self.chrome_profile_dir):
             os.makedirs(self.chrome_profile_dir)
@@ -120,6 +121,8 @@ class OpenconnectPulseLauncher:
                 # options.add_argument('--remote-debugging-pipe')
                 # options.add_argument('--remote-debugging-port=9222')
                 options.add_argument('user-data-dir=' + self.chrome_profile_dir)
+                # options.add_argument('profile-directory=Profile 33')
+                # print(options.__dict__)
 
                 logging.info('Starting browser.')
                 driver = webdriver.Chrome(service=service, options=options)
