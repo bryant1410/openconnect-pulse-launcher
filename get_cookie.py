@@ -6,10 +6,18 @@ import os
 import shutil
 import sys
 
+import undetected_chromedriver as uc
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
+#from seleniumbase import SB
+from seleniumbase import Driver
 from xdg_base_dirs import xdg_config_home
+
+
+def verify_success(sb):
+    sb.assert_element('img[alt="Logo Assembly"]', timeout=4)
+    sb.sleep(3)
 
 
 def get_cookie(vpn_url: str, chromedriver_path: str, chromium_path: str) -> str:
@@ -23,23 +31,41 @@ def get_cookie(vpn_url: str, chromedriver_path: str, chromium_path: str) -> str:
         if not dsid or "value" not in dsid:
             service = Service(executable_path=chromedriver_path)
             options = webdriver.ChromeOptions()
-            options.binary_location = chromium_path
-            options.add_argument("--window-size=800,900")
-            options.add_argument("user-data-dir=" + chrome_profile_dir)
+            #options.binary_location = chromium_path
+            #options.add_argument("--window-size=800,900")
+            #options.add_argument("user-data-dir=" + chrome_profile_dir)
+
+            #options.headless = True
+            #options.add_argument("start-maximized")
+            #options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            #options.add_experimental_option('useAutomationExtension', False)
 
             logging.info("Starting browser.")
-            driver = webdriver.Chrome(service=service, options=options)
+            #driver = webdriver.Chrome(service=service, options=options)
+            #driver = uc.Chrome(options=options)
+            with Driver(uc=True) as driver:
+                driver.get(vpn_url)
 
-            driver.get(vpn_url)
-            dsid = WebDriverWait(driver, float("inf")).until(lambda driver: driver.get_cookie("DSID"))
-            driver.quit()
-            return dsid["value"]
+                try:
+                    verify_success(driver)
+                except Exception:
+                    if driver.is_element_visible('input[value*="Verify"]'):
+                        driver.uc_click('input[value*="Verify"]')
+                    else:
+                        driver.uc_gui_click_captcha()
+                    try:
+                        verify_success(driver)
+                    except Exception as e:
+                        raise Exception("Detected!") from e
+
+                dsid = WebDriverWait(driver, float("inf")).until(lambda driver: driver.get_cookie("DSID"))
+                return dsid["value"]
 
 def main() -> None:
     argv = sys.argv[1:]
 
     chromedriver_path = shutil.which("chromedriver")
-    chromium_path = shutil.which("chromium") or shutil.which("google-chrome")
+    chromium_path = shutil.which("google-chrome") or shutil.which("chromium")
     help_message = f"{os.path.basename(__file__)} <vpn_url>".format()
 
     try:
