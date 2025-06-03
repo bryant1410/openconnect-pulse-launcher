@@ -25,38 +25,35 @@ def get_cookie(vpn_url: str, chromedriver_path: str, chromium_path: str) -> str:
     if not os.path.exists(chrome_profile_dir):
         os.makedirs(chrome_profile_dir)
 
-    dsid = None
+    service = Service(executable_path=chromedriver_path)
+
+    options = webdriver.ChromeOptions()
+    #options.binary_location = chromium_path
+    #options.add_argument("--window-size=800,900")
+    #options.add_argument("user-data-dir=" + chrome_profile_dir)
+
+    #options.headless = True
+    #options.add_argument("start-maximized")
+    #options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    #options.add_experimental_option('useAutomationExtension', False)
 
     while True:
-        if not dsid or "value" not in dsid:
-            service = Service(executable_path=chromedriver_path)
-            options = webdriver.ChromeOptions()
-            #options.binary_location = chromium_path
-            #options.add_argument("--window-size=800,900")
-            #options.add_argument("user-data-dir=" + chrome_profile_dir)
+        #with webdriver.Chrome(service=service, options=options) as driver:
+        #with uc.Chrome(options=options) as driver:
+        with Driver(options=options, uc=True) as driver:
+            driver.get(vpn_url)
 
-            #options.headless = True
-            #options.add_argument("start-maximized")
-            #options.add_experimental_option("excludeSwitches", ["enable-automation"])
-            #options.add_experimental_option('useAutomationExtension', False)
-
-            logging.info("Starting browser.")
-            #driver = webdriver.Chrome(service=service, options=options)
-            #driver = uc.Chrome(options=options)
-            with Driver(uc=True) as driver:
-                driver.get(vpn_url)
-
+            try:
+                verify_success(driver)
+            except Exception:
+                if driver.is_element_visible('input[value*="Verify"]'):
+                    driver.uc_click('input[value*="Verify"]')
+                else:
+                    driver.uc_gui_click_captcha()
                 try:
                     verify_success(driver)
-                except Exception:
-                    if driver.is_element_visible('input[value*="Verify"]'):
-                        driver.uc_click('input[value*="Verify"]')
-                    else:
-                        driver.uc_gui_click_captcha()
-                    try:
-                        verify_success(driver)
-                    except Exception as e:
-                        raise Exception("Detected!") from e
+                except Exception as e:
+                    raise Exception("Detected!") from e
 
                 dsid = WebDriverWait(driver, float("inf")).until(lambda driver: driver.get_cookie("DSID"))
                 return dsid["value"]
